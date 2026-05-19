@@ -1,0 +1,6 @@
+Dataset/
+models/
+venv/
+__pycache__/
+*.pkl
+attendance/*.csv
