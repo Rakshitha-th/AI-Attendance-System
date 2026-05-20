@@ -1,140 +1,136 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
+
 <meta charset="UTF-8">
 <title>Face Attendance</title>
 
 <style>
-body{
-    margin:0;
-    background:#020617;
-    color:white;
-    font-family:Arial;
+
+body{margin:0;background:#020617;color:white;font-family:Arial;
 }
 
-.container{
-    display:flex;
-    height:100vh;
+.container{display:flex;height:100vh;
 }
 
-.left{
-    width:250px;
-    background:#0f172a;
-    padding:20px;
+.left,.right{width:240px;background:#0f172a;padding:20px;
 }
 
-.center{
-    flex:1;
-    display:flex;
-    flex-direction:column;
+.left{display:flex;flex-direction:column;justify-content:center;gap:20px;
 }
 
-.right{
-    width:350px;
-    background:#0f172a;
-    padding:20px;
+.center{flex:1;padding:10px;
 }
 
-.card{
-    background:#111827;
-    padding:20px;
-    margin-bottom:15px;
-    border-radius:10px;
-    text-align:center;
+.card{background:#111827;padding:30px;border-radius:12px;text-align:center;
 }
 
-.video img{
-    width:100%;
-    height:100%;
+.card h2{margin:0 0 10px;font-size:35px;
 }
 
-table{
-    width:100%;
-    color:white;
+.card p{margin:0;color:#cbd5e1;
 }
 
-th,td{
-    padding:10px;
-    border-bottom:1px solid #333;
+h2,h3{text-align:center;color:#38bdf8;
 }
+
+.video img{width:100%;height:88vh;border-radius:12px;object-fit:cover;
+}
+
+table{width:100%;border-collapse:collapse;
+}
+
+th,td{padding:10px;text-align:center;border-bottom:1px solid #333;
+}
+
+th{
+    color:#38bdf8;
+}
+
 </style>
+
 </head>
 
 <body>
 
 <div class="container">
 
-<!-- LEFT -->
-<div class="left">
-    <div class="card">
-        <h2 id="reg">{{ registered_count }}</h2>
-        <p>Registered</p>
+    <div class="left">
+
+        <div class="card">
+            <h2 id="reg">{{ registered_count }}</h2>
+            <p>Registered</p>
+        </div>
+
+        <div class="card">
+            <h2 id="faces">{{ face_count }}</h2>
+            <p>Predicted</p>
+        </div>
+
     </div>
 
-    <div class="card">
-        <h2 id="faces">{{ face_count }}</h2>
-        <p>Faces</p>
+    <div class="center">
+
+        <h2>LIVE FACE RECOGNITION</h2>
+
+        <div class="video">
+            <img src="/video">
+        </div>
+
     </div>
-</div>
 
-<!-- CENTER -->
-<div class="center">
-    <h2 style="text-align:center;">LIVE FACE RECOGNITION</h2>
+    <div class="right">
 
-    <div class="video">
-        <img src="/video">
+        <h3>Attendance</h3>
+
+        <table>
+
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Time</th>
+                </tr>
+            </thead>
+
+            <tbody id="table">
+
+                {% for row in attendance %}
+                <tr>
+                    <td>{{ row[0] }}</td>
+                    <td>{{ row[2] }}</td>
+                </tr>
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
     </div>
-</div>
-
-<!-- RIGHT -->
-<div class="right">
-    <h3>Today's Attendance</h3>
-
-    <table>
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Date</th>
-                <th>Time</th>
-            </tr>
-        </thead>
-
-        <tbody id="table">
-            {% for row in attendance %}
-            <tr>
-                <td>{{ row[0] }}</td>
-                <td>{{ row[1] }}</td>
-                <td>{{ row[2] }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
 
 </div>
 
 <script>
-setInterval(async () => {
 
-    const res = await fetch('/data');
-    const data = await res.json();
+setInterval(async()=>{
 
-    document.getElementById("faces").innerText = data.face_count;
+    let res=await fetch('/data');
+    let data=await res.json();
 
-    let table = document.getElementById("table");
-    table.innerHTML = "";
+    document.getElementById("faces").innerText=data.face_count;
 
-    data.attendance.forEach(r => {
-        table.innerHTML += `
+    let table=document.getElementById("table");
+    table.innerHTML="";
+
+    data.attendance.forEach(r=>{
+        table.innerHTML+=`
         <tr>
             <td>${r[0]}</td>
-            <td>${r[1]}</td>
             <td>${r[2]}</td>
         </tr>`;
     });
 
-}, 3000);
+},3000);
+
 </script>
 
 </body>

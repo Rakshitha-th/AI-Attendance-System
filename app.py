@@ -4,6 +4,8 @@ import os
 import csv
 import joblib
 import numpy as np
+import webbrowser
+from threading import Timer
 from datetime import datetime
 from insightface.app import FaceAnalysis
 from sklearn.metrics.pairwise import cosine_similarity
@@ -26,23 +28,26 @@ if not os.path.exists(attendance_file):
         writer.writerow(["Name", "Date", "Time"])
 
 cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 
 face_count = 0
 
 def already_marked_today(name):
     today = datetime.now().strftime("%d-%m-%Y")
-
     with open(attendance_file, "r") as f:
         reader = csv.reader(f)
         next(reader, None)
-
         for row in reader:
             if len(row) == 3:
                 if row[0] == name and row[1] == today:
                     return True
+
     return False
 
 def mark_attendance(name):
+    if name == "Unknown":
+        return
     if already_marked_today(name):
         return
 
@@ -50,9 +55,11 @@ def mark_attendance(name):
     time = datetime.now().strftime("%H:%M:%S")
 
     with open(attendance_file, "a", newline="") as f:
+
         writer = csv.writer(f)
         writer.writerow([name, date, time])
 
+        print(f"{name} Attendance Marked")
 def generate_frames():
     global face_count
 
@@ -63,12 +70,9 @@ def generate_frames():
 
         faces = face_app.get(frame)
         face_count = len(faces)
-
         for face in faces:
             x1, y1, x2, y2 = map(int, face.bbox)
-
             emb = normalizer.transform([face.embedding])
-
             sims = cosine_similarity(emb, known_embeddings)[0]
             idx = np.argmax(sims)
             score = sims[idx]
@@ -76,41 +80,52 @@ def generate_frames():
             name = known_names[idx]
 
             if score < 0.70:
+
                 name = "Unknown"
                 color = (0, 0, 255)
+
             else:
+
                 color = (0, 255, 0)
                 mark_attendance(name)
 
             cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
-            cv2.putText(frame, f"{name} {score:.2f}",
-                        (x1, y1 - 10),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        0.7,
-                        color, 2)
+
+            cv2.putText(
+                frame,
+                f"{name} {score:.2f}",
+                (x1, y1 - 10),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.8,
+                color,
+                2
+            )
 
         ret, buffer = cv2.imencode('.jpg', frame)
         frame = buffer.tobytes()
 
-        yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+        yield (
+            b'--frame\r\n'
+            b'Content-Type: image/jpeg\r\n\r\n' +
+            frame +
+            b'\r\n'
+        )
 @app.route('/')
 def index():
+
     attendance = []
-
     today = datetime.now().strftime("%d-%m-%Y")
-
     with open(attendance_file, "r") as f:
         reader = csv.reader(f)
         next(reader, None)
-
         for row in reader:
+
             if len(row) == 3 and row[1] == today:
                 attendance.append(row)
 
     return render_template(
         "index.html",
-        registered_count=len(known_names),
+        registered_count=len(set(known_names)),
         face_count=face_count,
         attendance=attendance[::-1]
     )
@@ -118,15 +133,14 @@ def index():
 
 @app.route('/data')
 def data():
+
     attendance = []
-
     today = datetime.now().strftime("%d-%m-%Y")
-
     with open(attendance_file, "r") as f:
         reader = csv.reader(f)
         next(reader, None)
-
         for row in reader:
+
             if len(row) == 3 and row[1] == today:
                 attendance.append(row)
 
@@ -138,8 +152,22 @@ def data():
 
 @app.route('/video')
 def video():
-    return Response(generate_frames(),
-                    mimetype='multipart/x-mixed-replace; boundary=frame')
+
+    return Response(
+        generate_frames(),
+        mimetype='multipart/x-mixed-replace; boundary=frame'
+    )
+
+def open_browser():
+    webbrowser.open("http://127.0.0.1:5000")
 
 if __name__ == "__main__":
-    app.run(debug=False, threaded=True)
+
+    Timer(1, open_browser).start()
+
+    app.run(
+        debug=False,
+        threaded=True,
+        host="0.0.0.0",
+        port=5000
+    )
